@@ -196,7 +196,7 @@ def main():
     
     # 测试模型：预测以'time traveller'开头的10个字符
     print('--------------------------------------------------------------')
-    print(predict_ch8('time traveller', 10, net, vocab, device))
+    print(predict_ch8('time traveller', 100, net, vocab, device))
 
 
 if __name__ == '__main__':
