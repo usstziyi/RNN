@@ -185,12 +185,10 @@ def main():
     # 创建计算设备
     device = d2l.try_gpu()
     
-    # 创建RNN循环神经网络层
-    # 输入维度为词汇表大小，输出维度为隐藏层大小
-    rnn_layer = nn.RNN(len(vocab), num_hiddens)
-    
+    # 创建GRU层
+    gru_layer = nn.GRU(len(vocab), num_hiddens)
     # 创建RNN模型
-    net = RNNModel(rnn_layer, vocab_size=len(vocab))
+    net = RNNModel(gru_layer, vocab_size=len(vocab))
     net = net.to(device)
     
     # 训练模型
