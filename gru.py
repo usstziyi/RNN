@@ -10,6 +10,7 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 import math
+from typing import cast
 
 
 # 继承 nn.Module
@@ -100,7 +101,8 @@ def train_epoch_ch8(net, train_iter, loss, updater, device, use_random_iter):
         # 自定义 RNN 实现 ：通常也将状态设计为元组形式，以保持接口一致性
         if state is None or use_random_iter:
             # 在第一次迭代或使用随机抽样时初始化state
-            state = net.begin_state(batch_size=X.shape[0], device=device)
+            # 使用cast确保类型检查器理解net是RNNModel实例
+            state = cast(RNNModel, net).begin_state(batch_size=X.shape[0], device=device)
         else:
             if isinstance(net, nn.Module) and not isinstance(state, tuple):
                 # state对于nn.GRU是个张量
@@ -129,7 +131,7 @@ def train_epoch_ch8(net, train_iter, loss, updater, device, use_random_iter):
     # 返回困惑度、速度（词元数量/秒）
 
 
-# 梯度裁切：这种裁剪方式称为 “按范数裁剪”（Clipping by Norm），是梯度裁剪中最常用的一种。
+# 梯度裁切：这种裁剪方式称为 "按范数裁剪"（Clipping by Norm），是梯度裁剪中最常用的一种。
 # 这相当于把所有参数的梯度拼成一个超长向量，然后计算这个向量的模长。
 def grad_clipping(net, theta):  #@save
     if isinstance(net, nn.Module):
@@ -137,12 +139,22 @@ def grad_clipping(net, theta):  #@save
     else:
         params = net.params # 列出所有需要计算梯度的参数
 
-    # 计算梯度的 L2 范数（整体梯度的“长度”）
+    # 计算梯度的 L2 范数（整体梯度的"长度"）
     # 这相当于把所有参数的梯度拼成一个超长向量，然后计算这个向量的模长。
-    norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params))
-    if norm > theta:
-        for param in params:
-            param.grad[:] *= theta / norm
+    # 只考虑有梯度的参数，避免None值导致的错误
+    grad_norms = []
+    for p in params:
+        if p.grad is not None:
+            grad_norms.append(torch.sum(p.grad ** 2))
+    
+    if grad_norms:  # 如果有梯度存在
+        # 确保sum返回的是张量而不是标量
+        total_grad_norm = torch.stack(grad_norms).sum()
+        norm = torch.sqrt(total_grad_norm)
+        if norm > theta:
+            for param in params:
+                if param.grad is not None:
+                    param.grad[:] *= theta / norm
     # [:] 表示对张量内所有元素进行索引。
     # *= 是原地操作符（in-place），它不会创建新张量，而是直接修改原始张量内部的数据。
     
