@@ -20,6 +20,7 @@ from typing import cast
 # 状态: (L*D, B, H)=(L, B, H)
 class RNNModel(nn.Module):
     """循环神经网络模型"""
+
     def __init__(self, rnn_layer, vocab_size, **kwargs):
         super(RNNModel, self).__init__(**kwargs)
         # 循环层
@@ -58,19 +59,20 @@ class RNNModel(nn.Module):
         if not isinstance(self.rnn, nn.LSTM):
             # nn.GRU以张量作为隐状态
             # H:(L, B, H)
-            return  torch.zeros((self.num_directions * self.rnn.num_layers,
-                                 batch_size, self.num_hiddens),
-                                device=device)
+            return torch.zeros((self.num_directions * self.rnn.num_layers,
+                                batch_size, self.num_hiddens),
+                               device=device)
         else:
             # nn.LSTM以元组作为隐状态(H,C)
             # 第一个张量：隐藏状态,H:(L, B, H)
             # 第二个张量：细胞状态,C:(L, B, H)
             return (torch.zeros((
-                        self.num_directions * self.rnn.num_layers,
-                        batch_size, self.num_hiddens), device=device),
+                self.num_directions * self.rnn.num_layers,
+                batch_size, self.num_hiddens), device=device),
                     torch.zeros((
                         self.num_directions * self.rnn.num_layers,
                         batch_size, self.num_hiddens), device=device))
+
 
 # 训练
 def train_ch8(net, train_iter, vocab, lr, num_epochs, device, use_random_iter=False):
@@ -117,12 +119,12 @@ def train_epoch_ch8(net, train_iter, loss, updater, device, use_random_iter):
         y = Y.T.reshape(-1)  # 转置后，形状为 (时间步数, 批量大小)，然后展平为 (时间步数 * 批量大小,)
         X, y = X.to(device), y.to(device)
         # 核心
-        y_hat, state = net(X, state)        # 1.前向传播：不改变 w 和 b
-        l = loss(y_hat, y.long()).mean()    # 2.计算损失：计算预测值 y_hat 与真实标签 y 之间的损失
-        updater.zero_grad()                 # 3.梯度清零：将 w 和 b 的梯度设为 0
-        l.backward()                        # 4.反向传播：计算 w 和 b 的梯度(变化方向)，不改变 w 和 b
-        grad_clipping(net, 1)               # 5.梯度裁剪：将 w 和 b 的梯度裁剪到 [-1, 1] 之间
-        updater.step()                      # 6.更新参数: 根据梯度更新 w 和 b
+        y_hat, state = net(X, state)  # 1.前向传播：不改变 w 和 b
+        l = loss(y_hat, y.long()).mean()  # 2.计算损失：计算预测值 y_hat 与真实标签 y 之间的损失
+        updater.zero_grad()  # 3.梯度清零：将 w 和 b 的梯度设为 0
+        l.backward()  # 4.反向传播：计算 w 和 b 的梯度(变化方向)，不改变 w 和 b
+        grad_clipping(net, 1)  # 5.梯度裁剪：将 w 和 b 的梯度裁剪到 [-1, 1] 之间
+        updater.step()  # 6.更新参数: 根据梯度更新 w 和 b
         # 在没有计算 mean之前，loss 的返回值 shape 是 (时间步数 * 批量大小,)
         # 计算 mean 之后，loss 的返回值 shape 是 (1,)，即l是一个标量
 
@@ -130,24 +132,14 @@ def train_epoch_ch8(net, train_iter, loss, updater, device, use_random_iter):
     return math.exp(metric[0] / metric[1]), metric[1] / timer.stop()
     # 返回困惑度、速度（词元数量/秒）
 
-    # metric = d2l.Accumulator(2) 创建了一个累加器，用来存储两个值：训练损失之和和词元数量
-    # 在每次迭代中，通过metric.add(l * y.numel(), y.numel()) 更新这两个值：
-    # 第一个参数l * y.numel() 是当前批次的总损失（平均损失乘以词元数量）
-    # 第二个参数y.numel() 是当前批次的词元数量
-    # 在函数末尾，计算困惑度为math.exp(metric[0] / metric[1]) ，其中：
-    # metric[0] 是所有批次的总损失
-    # metric[1] 是所有批次的总词元数量
-    # metric[0] / metric[1] 是平均损失
-    # math.exp(平均损失) 就是困惑度
-
 
 # 梯度裁切：这种裁剪方式称为 "按范数裁剪"（Clipping by Norm），是梯度裁剪中最常用的一种。
 # 这相当于把所有参数的梯度拼成一个超长向量，然后计算这个向量的模长。
-def grad_clipping(net, theta):  #@save
+def grad_clipping(net, theta):  # @save
     if isinstance(net, nn.Module):
-        params = [p for p in net.parameters() if p.requires_grad]# 列出所有需要计算梯度的参数
+        params = [p for p in net.parameters() if p.requires_grad]  # 列出所有需要计算梯度的参数
     else:
-        params = net.params # 列出所有需要计算梯度的参数
+        params = net.params  # 列出所有需要计算梯度的参数
 
     # 计算梯度的 L2 范数（整体梯度的"长度"）
     # 这相当于把所有参数的梯度拼成一个超长向量，然后计算这个向量的模长。
@@ -156,7 +148,7 @@ def grad_clipping(net, theta):  #@save
     for p in params:
         if p.grad is not None:
             grad_norms.append(torch.sum(p.grad ** 2))
-    
+
     if grad_norms:  # 如果有梯度存在
         # 确保sum返回的是张量而不是标量
         total_grad_norm = torch.stack(grad_norms).sum()
@@ -167,13 +159,14 @@ def grad_clipping(net, theta):  #@save
                     param.grad[:] *= theta / norm
     # [:] 表示对张量内所有元素进行索引。
     # *= 是原地操作符（in-place），它不会创建新张量，而是直接修改原始张量内部的数据。
-    
+
     # 缩放因子是 theta / norm，这样缩放后，新的梯度范数正好等于 theta。
     # 使用 param.grad[:] *= ... 是为了原地修改梯度，不影响梯度张量的内存地址（这对优化器很重要）。
     # 假设：所有参数梯度拼起来的 L2 范数是 norm = 10.0，设定阈值 theta = 5.0
     # 那么缩放因子 = 5.0 / 10.0 = 0.5，所有梯度乘以 0.5，最终范数变成 5.0。
     # 这是全局裁剪：所有参数共享同一个缩放因子，保持梯度方向不变，只缩放大小。
     # PyTorch 官方也提供了类似功能：torch.nn.utils.clip_grad_norm_，功能基本一致。
+
 
 # 预测
 def predict_ch8(prefix, num_preds, net, vocab, device):
@@ -200,25 +193,26 @@ def main():
     batch_size, num_steps = 32, 35  # 批量大小和时间步长
     num_hiddens = 256  # 隐藏层大小
     num_epochs, lr = 500, 1  # 训练轮数和学习率
-    
+
     # 加载数据集和词汇表
     train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
-    
+
     # 创建计算设备
     device = d2l.try_gpu()
-    
-    # 创建GRU层
-    gru_layer = nn.GRU(len(vocab), num_hiddens)
+
+    # 创建GRU层,并指定网络层数
+    gru_layer = nn.GRU(len(vocab), num_hiddens, num_layers=2)
     # 创建RNN模型
     net = RNNModel(gru_layer, vocab_size=len(vocab))
     net = net.to(device)
-    
+
     # 训练模型
     train_ch8(net, train_iter, vocab, lr, num_epochs, device)
-    
+
     # 测试模型：预测以'time traveller'开头的10个字符
     print('--------------------------------------------------------------')
     print(predict_ch8('time traveller', 100, net, vocab, device))
+    print(predict_ch8('i like apple ', 100, net, vocab, device))
 
 
 if __name__ == '__main__':
