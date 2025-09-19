@@ -75,7 +75,7 @@ class RNNModel(nn.Module):
 # 训练
 def train_ch8(net, train_iter, vocab, lr, num_epochs, device, use_random_iter=False):
     # 定义损失函数
-    loss = nn.CrossEntropyLoss()
+    loss = nn.CrossEntropyLoss() # 交叉熵损失函数
     # 定义优化器
     updater = torch.optim.SGD(net.parameters(), lr)
     # 定义预测函数，使用 predict_ch8 函数对给定前缀进行预测，生成长度为 50 的文本
@@ -206,11 +206,13 @@ def main():
     
     # 创建计算设备
     device = d2l.try_gpu()
+
+    # 创建循环神经网络层
+    # 输入维度为词汇表大小，输出维度为隐藏层大小
+    rnn_layer = nn.RNN(len(vocab), num_hiddens)
     
-    # 创建GRU层
-    gru_layer = nn.GRU(len(vocab), num_hiddens)
     # 创建RNN模型
-    net = RNNModel(gru_layer, vocab_size=len(vocab))
+    net = RNNModel(rnn_layer, vocab_size=len(vocab))
     net = net.to(device)
     
     # 训练模型
