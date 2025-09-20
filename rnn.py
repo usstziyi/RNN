@@ -21,9 +21,7 @@ class RNNModel(nn.Module):
     def __init__(self, hidden_size, num_layers, vocab, **kwargs):
         super(RNNModel, self).__init__(**kwargs)
 
-        self.vocab_size = len(vocab)
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+ 
         
 
 
@@ -50,19 +48,19 @@ class RNNModel(nn.Module):
         # )
         # 输出层(H,D)
         self.linear = nn.Linear(
-            in_features=self.hidden_size, 
-            out_features=self.vocab_size
+            in_features=self.rnn.hidden_size, 
+            out_features=self.rnn.input_size
         )
 
     # 给 nn.RNN 或 nn.LSTM 初始化隐藏状态
     def begin_state(self, batch_size=1, device=None):
         if isinstance(self.rnn, nn.RNN):
-            return torch.zeros((self.num_layers, batch_size, self.hidden_size),device=device) # state(L,B,H)
+            return torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device) # state(L,B,H)
         elif isinstance(self.rnn, nn.GRU):
-            return torch.zeros((self.num_layers, batch_size, self.hidden_size),device=device) # state(L,B,H)
+            return torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device) # state(L,B,H)
         elif isinstance(self.rnn, nn.LSTM):
-            return (torch.zeros((self.num_layers, batch_size, self.hidden_size),device=device), # state(L,B,H)
-                    torch.zeros((self.num_layers, batch_size, self.hidden_size),device=device)) # cell(L,B,H)
+            return (torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device), # state(L,B,H)
+                    torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device)) # cell(L,B,H)
         else:
             raise ValueError(f'未知的RNN类型 {type(self.rnn)}')
 
