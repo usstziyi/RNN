@@ -49,7 +49,10 @@ class RNNModel(nn.Module):
         #     num_layers = self.num_layers
         # )
         # 输出层(H,D)
-        self.linear = nn.Linear(self.hidden_size, self.vocab_size)
+        self.linear = nn.Linear(
+            in_features=self.hidden_size, 
+            out_features=self.vocab_size
+        )
 
     # 给 nn.RNN 或 nn.LSTM 初始化隐藏状态
     def begin_state(self, batch_size=1, device=None):
