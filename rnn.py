@@ -27,9 +27,9 @@ class RNNModel(nn.Module):
 
         # 循环层(D,H)
         self.rnn = nn.RNN(
-            input_size = self.vocab_size, 
-            hidden_size = self.hidden_size, 
-            num_layers = self.num_layers,
+            input_size = len(vocab),
+            hidden_size = hidden_size, 
+            num_layers = num_layers,
             nonlinearity='tanh',
             bias=True,
             batch_first=False,
@@ -37,12 +37,12 @@ class RNNModel(nn.Module):
             bidirectional=False,
         )
         # self.rnn = nn.GRU(
-        #     input_size = self.vocab_size, 
+        #     input_size = len(vocab), 
         #     hidden_size = self.hidden_size, 
         #     num_layers = self.num_layers
         # )
         # self.rnn = nn.LSTM(
-        #     input_size = self.vocab_size, 
+        #     input_size = len(vocab), 
         #     hidden_size = self.hidden_size, 
         #     num_layers = self.num_layers
         # )
@@ -69,7 +69,7 @@ class RNNModel(nn.Module):
     # outputs(T*B,D)
     def forward(self, inputs, state):
         # inputs(B,T)->(T,B)->(T,B,D)
-        inputs = F.one_hot(inputs.T.long(), self.vocab_size).to(torch.float32) # 独热编码
+        inputs = F.one_hot(inputs.T.long(), self.rnn.input_size).to(torch.float32) # 独热编码
         # inputs(T,B,D)
         # state(L,B,H)
         # rnn(D,H)
