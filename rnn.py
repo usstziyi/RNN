@@ -10,6 +10,7 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 import math
+import matplotlib.pyplot as plt
 
 
 # 继承 nn.Module
@@ -92,6 +93,9 @@ def train_rnn(net, train_iter, lr, num_epochs, device, use_random_iter=False):
     # 定义优化器
     updater = torch.optim.SGD(net.parameters(), lr)
 
+    # 初始化绘图
+    fig,ax,line,epochs_list,ppls_list = init_plot(lr)
+
     # 训练
     for epoch in range(num_epochs):
         timer = d2l.Timer()
@@ -138,8 +142,13 @@ def train_rnn(net, train_iter, lr, num_epochs, device, use_random_iter=False):
             # 累加损失，累加词元总数
             metric.add(l * right_mat.numel(), right_mat.numel())
 
-        ppl, speed = math.exp(metric[0] / metric[1]), metric[1] / timer.stop()
+        ppl = math.exp(metric[0] / metric[1])
+        speed = metric[1] / timer.stop()
         print(f'epoch {(epoch + 1):3d}/{num_epochs}, 困惑度 {ppl:.1f}, {speed:.1f} 词元/秒 {str(device)}')
+        # 更新绘图
+        update_plot(epoch+1,ppl,epochs_list,ppls_list,line,ax)
+    # 关闭绘图
+    close_plot()
 
 
 # 梯度裁切：为了防止梯度爆炸，我们可以对梯度进行裁剪，将其限制在一个指定的范围内。
@@ -200,6 +209,42 @@ def predict_rnn(prefix, num_preds, net, vocab, device):
         outputs.append(int(y.argmax(dim=1).reshape(1)))
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 
+
+# 初始化绘图
+def init_plot(lr):
+    plt.ion()  # 开启交互模式
+    fig, ax = plt.subplots(figsize=(10, 6))
+    epochs_list = [] # x轴数据
+    ppls_list = [] # y轴数据
+    line, = ax.plot(epochs_list, ppls_list, 'b-', linewidth=2, label='Perplexity')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Perplexity')
+    ax.set_title(f'RNN Training Perplexity vs Epoch (lr={lr})')
+    ax.grid(True)
+    ax.legend()
+    plt.tight_layout()
+    return fig, ax, line, epochs_list, ppls_list
+    # fig是画布
+    # ax是坐标系区域(axis是带刻度的图表框)，一个fig 上可以有多个 ax
+    # line是线对象
+    # epochs_list和ppls_list是数据列表
+
+
+# 更新绘图
+def update_plot(epoch, ppl, epochs_list, ppls_list, line, ax):
+    epochs_list.append(epoch)
+    ppls_list.append(ppl)
+    line.set_xdata(epochs_list)
+    line.set_ydata(ppls_list)
+    ax.set_xlim(0, epoch + 2)  # 确保x轴范围包含当前epoch，右边预留2个单位
+    ax.set_ylim(0, max(ppls_list) * 1.1 if ppls_list else 1)  # 防止空列表报错
+    plt.draw()
+    plt.pause(0.01)
+
+# 关闭绘图
+def close_plot():
+    plt.ioff()  # 关闭交互模式->恢复默认行为
+    plt.show()  # 阻塞，保持窗口打开直到用户手动关闭
 
 def main():
     # 设置超参数
