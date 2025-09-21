@@ -238,7 +238,7 @@ def update_plot(epoch, ppl, epochs_list, ppls_list, line, ax):
     line.set_xdata(epochs_list)
     line.set_ydata(ppls_list)
     ax.set_xlim(0, epoch + 2)  # 确保x轴范围包含当前epoch，右边预留2个单位
-    ax.set_ylim(0, max(ppls_list) * 1.1 if ppls_list else 1)  # 防止空列表报错
+    ax.set_ylim(0, max(ppls_list) * 1.1 if ppls_list else 1)  # 防止空列表报错, y轴预留10%
     plt.draw()
     plt.pause(0.01)
 
