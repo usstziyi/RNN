@@ -140,7 +140,8 @@ def train_rnn(net, train_iter, lr, num_epochs, device, use_random_iter=False):
             updater.step()                                     # 6.更新参数: 根据梯度更新 w 和 b
             
             # 累加损失，累加词元总数
-            metric.add(l * right_mat.numel(), right_mat.numel())
+            with torch.no_grad():
+                metric.add(l * right_mat.numel(), right_mat.numel())
 
         ppl = math.exp(metric[0] / metric[1])
         speed = metric[1] / timer.stop()
