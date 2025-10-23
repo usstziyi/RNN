@@ -10,81 +10,11 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 import math
-import matplotlib.pyplot as plt
+from common import init_plot, update_plot, close_plot
+from model import RNNModel
+from common import try_gpu, display_model
 
 
-# 继承 nn.Module
-# inputs(T, B)
-# outputs(T*B,H)
-# state(L,B,H)
-class RNNModel(nn.Module):
-    """循环神经网络模型"""
-    def __init__(self, hidden_size, num_layers, vocab, **kwargs):
-        super(RNNModel, self).__init__(**kwargs)
-
- 
-        
-
-
-        # 循环层(D,H)
-        self.rnn = nn.RNN(
-            input_size = len(vocab),
-            hidden_size = hidden_size, 
-            num_layers = num_layers,
-            nonlinearity='tanh',
-            bias=True,
-            batch_first=False,
-            dropout=0,
-            bidirectional=False,
-        )
-        # self.rnn = nn.GRU(
-        #     input_size = len(vocab), 
-        #     hidden_size = self.hidden_size, 
-        #     num_layers = self.num_layers
-        # )
-        # self.rnn = nn.LSTM(
-        #     input_size = len(vocab), 
-        #     hidden_size = self.hidden_size, 
-        #     num_layers = self.num_layers
-        # )
-        # 输出层(H,D)
-        self.linear = nn.Linear(
-            in_features=self.rnn.hidden_size, 
-            out_features=self.rnn.input_size
-        )
-
-    # 给 nn.RNN 或 nn.LSTM 初始化隐藏状态
-    def begin_state(self, batch_size=1, device=None):
-        if isinstance(self.rnn, nn.RNN):
-            return torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device) # state(L,B,H)
-        elif isinstance(self.rnn, nn.GRU):
-            return torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device) # state(L,B,H)
-        elif isinstance(self.rnn, nn.LSTM):
-            return (torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device), # state(L,B,H)
-                    torch.zeros((self.rnn.num_layers, batch_size, self.rnn.hidden_size),device=device)) # cell(L,B,H)
-        else:
-            raise ValueError(f'未知的RNN类型 {type(self.rnn)}')
-
-    # inputs(B,T)
-    # state(L,B,H)
-    # outputs(T*B,D)
-    def forward(self, inputs, state):
-        # inputs(B,T)->(T,B)->(T,B,D)
-        inputs = F.one_hot(inputs.T.long(), self.rnn.input_size).to(torch.float32) # 独热编码
-        # inputs(T,B,D)
-        # state(L,B,H)
-        # rnn(D,H)
-        # states(T,B,H)
-        # state(L,B,H)
-        states, state = self.rnn(inputs, state)
-        # states是所有时间步的隐藏状态
-        # state是最后一个时间步的所有隐藏状态
-
-        # states(T,B,H)->(T*B,H)
-        # linear(H,D)
-        # outputs(T*B,D)
-        output = self.linear(states.reshape((-1, states.shape[-1])))
-        return output, state
 
 # 训练
 def train_rnn(net, train_iter, lr, num_epochs, device, use_random_iter=False):
@@ -211,41 +141,6 @@ def predict_rnn(prefix, num_preds, net, vocab, device):
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 
 
-# 初始化绘图
-def init_plot(lr):
-    plt.ion()  # 开启交互模式
-    fig, ax = plt.subplots(figsize=(10, 6))
-    epochs_list = [] # x轴数据
-    ppls_list = [] # y轴数据
-    line, = ax.plot(epochs_list, ppls_list, 'b-', linewidth=2, label='Perplexity')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Perplexity')
-    ax.set_title(f'RNN Training Perplexity vs Epoch (lr={lr})')
-    ax.grid(True)
-    ax.legend()
-    plt.tight_layout()
-    return fig, ax, line, epochs_list, ppls_list
-    # fig是画布
-    # ax是坐标系区域(axis是带刻度的图表框)，一个fig 上可以有多个 ax
-    # line是线对象
-    # epochs_list和ppls_list是数据列表
-
-
-# 更新绘图
-def update_plot(epoch, ppl, epochs_list, ppls_list, line, ax):
-    epochs_list.append(epoch)
-    ppls_list.append(ppl)
-    line.set_xdata(epochs_list)
-    line.set_ydata(ppls_list)
-    ax.set_xlim(0, epoch + 2)  # 确保x轴范围包含当前epoch，右边预留2个单位
-    ax.set_ylim(0, max(ppls_list) * 1.1 if ppls_list else 1)  # 防止空列表报错, y轴预留10%
-    plt.draw()
-    plt.pause(0.01)
-
-# 关闭绘图
-def close_plot():
-    plt.ioff()  # 关闭交互模式->恢复默认行为
-    plt.show()  # 阻塞，保持窗口打开直到用户手动关闭
 
 def main():
     # 设置超参数
@@ -254,7 +149,7 @@ def main():
     hidden_size = 256   # H:隐藏层大小
     num_layers = 1      # L:隐藏层数量
     num_epochs, lr = 500, 1  # 训练轮数和学习率
-    device = d2l.try_gpu()
+    device = try_gpu()
     
     # 加载数据集和词汇表
     train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
@@ -263,6 +158,8 @@ def main():
     # 创建RNN模型
     net = RNNModel(hidden_size, num_layers, vocab)
     net = net.to(device)
+    # 显示模型结构和参数数量
+    display_model(net)
     
     # 训练模型
     train_rnn(net, train_iter, lr, num_epochs, device)

@@ -7,13 +7,22 @@
 - 基于PyTorch的nn.RNN实现循环神经网络
 - 字符级语言建模与预测
 - 支持文本生成
+- 模块化的代码结构，便于维护和扩展
 
 ## 项目结构
 ```
 RNN/
-├── rnn.py       # RNN模型实现和训练代码
-├── .gitignore   # Git忽略规则
-└── README.md    # 项目说明文档
+├── .gitignore         # Git忽略规则
+├── README.md          # 项目说明文档
+├── common/            # 通用工具模块
+│   ├── __init__.py
+│   ├── dataline.py    # 数据处理相关功能
+│   ├── device.py      # 设备管理（CPU/GPU）
+│   └── displaymodel.py # 模型展示相关功能
+├── model/             # 模型定义
+│   ├── __init__.py
+│   └── rnn.py         # RNN模型实现
+└── test_rnn.py        # 测试和运行模型的主程序
 ```
 
 ## 依赖项
@@ -23,9 +32,9 @@ RNN/
 
 ## 使用方法
 1. 确保安装了所有依赖项
-2. 直接运行rnn.py文件：
+2. 直接运行测试文件：
    ```
-   python rnn.py
+   python test_rnn.py
    ```
 3. 程序将自动加载数据、训练模型并进行文本预测
 
@@ -36,5 +45,10 @@ RNN/
 - 训练轮数: 500
 - 学习率: 1
 
+## 代码结构说明
+- **common/**: 包含通用工具函数，如数据处理、设备管理和模型展示
+- **model/**: 包含RNN模型的定义和实现
+- **test_rnn.py**: 主程序，用于训练和测试模型
+
 ## 结果示例
-训练完成后，程序会输出以"time traveller"开头的10个预测字符。
+训练完成后，程序会输出以"time traveller"开头的预测文本。
